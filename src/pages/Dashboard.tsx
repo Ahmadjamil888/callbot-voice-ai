@@ -1,17 +1,17 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Bot, AlertTriangle, LogOut } from 'lucide-react';
+import { Phone, Bot, AlertTriangle, TrendingUp, Clock, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { StatsCard } from '@/components/StatsCard';
+import { LoadingSpinner, PageLoader } from '@/components/LoadingSpinner';
 
 interface Profile {
   id: string;
@@ -27,24 +27,20 @@ interface Integration {
   whatsapp_business_id: string | null;
 }
 
-interface CallLog {
-  id: string;
-  call_date: string;
-  call_time: string;
-  duration: number | null;
-  summary: string | null;
+interface CallStats {
+  totalCalls: number;
+  thisMonth: number;
+  avgDuration: number;
+  connectedServices: number;
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [twilioNumber, setTwilioNumber] = useState('');
-  const [whatsappId, setWhatsappId] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Fetch user profile
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -75,34 +71,46 @@ const Dashboard = () => {
     enabled: !!user,
   });
 
-  // Fetch call logs
-  const { data: callLogs = [] } = useQuery({
-    queryKey: ['callLogs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
+  // Fetch call stats
+  const { data: callStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['callStats'],
+    queryFn: async (): Promise<CallStats> => {
+      const { data: calls, error } = await supabase
         .from('call_logs')
         .select('*')
-        .eq('user_id', user?.id)
-        .order('call_date', { ascending: false })
-        .order('call_time', { ascending: false })
-        .limit(10);
+        .eq('user_id', user?.id);
       
       if (error) throw error;
-      return data as CallLog[];
+
+      const now = new Date();
+      const thisMonth = calls?.filter(call => {
+        const callDate = new Date(call.call_date);
+        return callDate.getMonth() === now.getMonth() && 
+               callDate.getFullYear() === now.getFullYear();
+      }).length || 0;
+
+      const avgDuration = calls?.length 
+        ? Math.round(calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length)
+        : 0;
+
+      const connectedServices = [
+        integration?.twilio_phone_number,
+        integration?.whatsapp_business_id
+      ].filter(Boolean).length;
+
+      return {
+        totalCalls: calls?.length || 0,
+        thisMonth,
+        avgDuration,
+        connectedServices
+      };
     },
     enabled: !!user,
   });
 
-  // Set form values when integration data loads
-  useEffect(() => {
-    if (integration) {
-      setTwilioNumber(integration.twilio_phone_number || '');
-      setWhatsappId(integration.whatsapp_business_id || '');
-    }
-  }, [integration]);
-
-  // Check if trial has expired
+  // Check if trial has expired and user is not subscribed
   const isTrialExpired = () => {
+    if (isSubscribed) return false;
     if (!profile?.trial_start) return false;
     const trialStart = new Date(profile.trial_start);
     const now = new Date();
@@ -110,216 +118,152 @@ const Dashboard = () => {
     return diffDays > 7;
   };
 
-  const saveIntegrations = async () => {
-    if (!user) return;
-    
-    setSaving(true);
-    try {
-      const integrationData = {
-        user_id: user.id,
-        twilio_phone_number: twilioNumber || null,
-        whatsapp_business_id: whatsappId || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (integration) {
-        // Update existing
-        const { error } = await supabase
-          .from('integrations')
-          .update(integrationData)
-          .eq('id', integration.id);
-        
-        if (error) throw error;
-      } else {
-        // Create new
-        const { error } = await supabase
-          .from('integrations')
-          .insert(integrationData);
-        
-        if (error) throw error;
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['integration'] });
+  const handleUpgrade = () => {
+    window.open('https://buy.stripe.com/test_cNi00l7QKgMw1rf6nb0gw01', '_blank');
+    // Set subscribed status after payment (in real app, this would be handled by webhook)
+    setTimeout(() => {
+      setIsSubscribed(true);
       toast({
         title: "Success",
-        description: "Integrations saved successfully!",
+        description: "Thank you for subscribing! You now have unlimited access.",
       });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save integrations. Please try again.",
-      });
-    } finally {
-      setSaving(false);
-    }
+    }, 1000);
   };
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return 'N/A';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  if (profileLoading) {
+    return <PageLoader />;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <Phone className="text-white" size={16} />
-            </div>
-            <span className="text-xl font-bold text-gray-900">CallBot AI</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      <DashboardSidebar />
+      
+      <div className="flex-1 lg:ml-0 ml-0">
+        <div className="p-6 lg:p-8">
+          {/* Header */}
+          <div className="mb-8 lg:ml-0 ml-12">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back{profile?.company_name ? `, ${profile.company_name}` : ''}
+            </h1>
+            <p className="text-gray-600">Manage your AI voice assistant and call integrations.</p>
           </div>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut size={16} className="mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {profile?.company_name || 'there'}!
-          </h1>
-          <p className="text-gray-600">Manage your AI voice assistant and call integrations.</p>
-        </div>
+          {/* Trial Warning */}
+          {isTrialExpired() && (
+            <Alert className="mb-6 border-orange-200 bg-orange-50 lg:ml-0 ml-12">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800 flex items-center justify-between">
+                <span>Your 7-day trial has ended. Please upgrade to continue using CallBot AI.</span>
+                <Button 
+                  onClick={handleUpgrade}
+                  className="ml-4 bg-orange-600 hover:bg-orange-700 text-white"
+                  size="sm"
+                >
+                  Upgrade Now
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {/* Trial Warning */}
-        {isTrialExpired() && (
-          <Alert className="mb-6 border-orange-200 bg-orange-50">
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-            <AlertDescription className="text-orange-800">
-              Your 7-day trial has ended. Please upgrade to continue using CallBot AI.{' '}
-              <Button variant="link" className="p-0 h-auto text-orange-600">
-                View Pricing
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 lg:ml-0 ml-12">
+            <StatsCard
+              title="Total Calls"
+              value={callStats?.totalCalls || 0}
+              icon={Phone}
+              loading={statsLoading}
+            />
+            <StatsCard
+              title="This Month"
+              value={callStats?.thisMonth || 0}
+              icon={TrendingUp}
+              loading={statsLoading}
+            />
+            <StatsCard
+              title="Avg Duration"
+              value={`${Math.floor((callStats?.avgDuration || 0) / 60)}:${String((callStats?.avgDuration || 0) % 60).padStart(2, '0')}`}
+              icon={Clock}
+              loading={statsLoading}
+            />
+            <StatsCard
+              title="Connected Services"
+              value={callStats?.connectedServices || 0}
+              icon={Users}
+              loading={statsLoading}
+            />
+          </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Integration Panel */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Bot className="mr-2" size={20} />
-                Connect Call Services
-              </CardTitle>
-              <CardDescription>
-                Connect your phone services to enable AI call handling
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="twilio">Twilio Phone Number</Label>
-                <Input
-                  id="twilio"
-                  value={twilioNumber}
-                  onChange={(e) => setTwilioNumber(e.target.value)}
-                  placeholder="+1234567890"
-                  disabled={isTrialExpired()}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp Business ID</Label>
-                <Input
-                  id="whatsapp"
-                  value={whatsappId}
-                  onChange={(e) => setWhatsappId(e.target.value)}
-                  placeholder="Enter WhatsApp Business ID"
-                  disabled={isTrialExpired()}
-                />
-              </div>
-
-              <Button 
-                onClick={saveIntegrations} 
-                disabled={saving || isTrialExpired()}
-                className="w-full"
-              >
-                {saving ? 'Saving...' : 'Save Integrations'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* AI Assistant Setup */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Bot className="mr-2" size={20} />
-                AI Assistant Setup
-              </CardTitle>
-              <CardDescription>
-                Your AI is configured with your business information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Business Type</Label>
-                <p className="text-sm text-gray-600 capitalize">
-                  {profile?.niche?.replace('-', ' ') || 'Not specified'}
-                </p>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-gray-700">AI Prompt Preview</Label>
-                <div className="bg-gray-100 p-3 rounded-lg text-sm">
-                  You are a voice assistant for a {profile?.niche?.replace('-', ' ')} business named {profile?.company_name}.
-                  Begin each call with "Welcome to {profile?.company_name}, how may I help you?"
-                  Respond like a human staff member using this description: {profile?.description}
+          <div className="grid lg:grid-cols-2 gap-8 lg:ml-0 ml-12">
+            {/* AI Assistant Status */}
+            <Card className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Bot className="mr-2" size={20} />
+                  AI Assistant Status
+                </CardTitle>
+                <CardDescription>
+                  Your AI is configured and ready to handle calls
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div>
+                    <p className="font-medium text-green-900">✅ AI Ready</p>
+                    <p className="text-sm text-green-700">
+                      Configured for {profile?.niche?.replace('-', ' ') || 'general'} business
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    Active
+                  </Badge>
                 </div>
-              </div>
+                
+                {profile?.description && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 font-medium mb-2">AI Instructions:</p>
+                    <p className="text-sm text-gray-700">{profile.description}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <Badge variant="secondary" className="w-fit">
-                ✅ AI Ready
-              </Badge>
-            </CardContent>
-          </Card>
+            {/* Quick Actions */}
+            <Card className="hover:shadow-md transition-shadow duration-200">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>
+                  Manage your CallBot AI settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => window.location.href = '/dashboard/integrations'}
+                >
+                  <Phone className="mr-2" size={16} />
+                  Manage Integrations
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start border-gray-200 hover:bg-gray-50"
+                  onClick={() => window.location.href = '/dashboard/history'}
+                >
+                  <AlertTriangle className="mr-2" size={16} />
+                  View Call History
+                </Button>
+                {!isSubscribed && (
+                  <Button 
+                    onClick={handleUpgrade}
+                    className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <TrendingUp className="mr-2" size={16} />
+                    Upgrade to Pro
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        {/* Call Logs */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Recent Call Logs</CardTitle>
-            <CardDescription>View your recent AI-handled calls and summaries</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {callLogs.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Summary</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {callLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{new Date(log.call_date).toLocaleDateString()}</TableCell>
-                      <TableCell>{log.call_time}</TableCell>
-                      <TableCell>{formatDuration(log.duration)}</TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {log.summary || 'No summary available'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Phone className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <p>No calls yet. Set up your integrations to start receiving calls!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

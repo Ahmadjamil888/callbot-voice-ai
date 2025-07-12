@@ -11,6 +11,10 @@ import AuthPage from "./pages/Auth";
 import OnboardingStep1 from "./pages/OnboardingStep1";
 import OnboardingStep2 from "./pages/OnboardingStep2";
 import Dashboard from "./pages/Dashboard";
+import CallHistory from "./pages/CallHistory";
+import Integrations from "./pages/Integrations";
+import Subscriptions from "./pages/Subscriptions";
+import Billing from "./pages/Billing";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +44,26 @@ const App = () => (
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/history" element={
+              <ProtectedRoute>
+                <CallHistory />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/integrations" element={
+              <ProtectedRoute>
+                <Integrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/subscriptions" element={
+              <ProtectedRoute>
+                <Subscriptions />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/billing" element={
+              <ProtectedRoute>
+                <Billing />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
