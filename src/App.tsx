@@ -17,6 +17,7 @@ import Integrations from "./pages/Integrations";
 import Subscriptions from "./pages/Subscriptions";
 import Billing from "./pages/Billing";
 import Pricing from "./pages/Pricing";
+import VoiceAITest from "./pages/VoiceAITest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,11 @@ const App = () => (
             <Route path="/dashboard/billing" element={
               <ProtectedRoute>
                 <Billing />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/voice-ai-test" element={
+              <ProtectedRoute>
+                <VoiceAITest />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

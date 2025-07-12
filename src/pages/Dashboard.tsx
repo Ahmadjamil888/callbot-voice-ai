@@ -251,6 +251,14 @@ const Dashboard = () => {
                   <AlertTriangle className="mr-2" size={16} />
                   View Call History
                 </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start border-gray-200 hover:bg-gray-50"
+                  onClick={() => window.location.href = '/dashboard/voice-ai-test'}
+                >
+                  <Phone className="mr-2" size={16} />
+                  Test Voice AI
+                </Button>
                 {!isSubscribed && (
                   <Button 
                     onClick={handleUpgrade}

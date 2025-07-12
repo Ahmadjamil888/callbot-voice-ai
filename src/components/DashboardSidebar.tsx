@@ -10,7 +10,8 @@ import {
   Package,
   LogOut,
   Menu,
-  X
+  X,
+  Mic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Call History', href: '/dashboard/history', icon: History },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Settings },
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Package },
+  { name: 'Voice AI Test', href: '/dashboard/voice-ai-test', icon: Mic },
   { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
 ];
 
