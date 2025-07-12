@@ -14,7 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      call_logs: {
+        Row: {
+          call_date: string
+          call_time: string
+          created_at: string | null
+          duration: number | null
+          id: string
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          call_date: string
+          call_time: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          call_date?: string
+          call_time?: string
+          created_at?: string | null
+          duration?: number | null
+          id?: string
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          created_at: string | null
+          id: string
+          twilio_phone_number: string | null
+          updated_at: string | null
+          user_id: string
+          whatsapp_business_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+          user_id: string
+          whatsapp_business_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+          user_id?: string
+          whatsapp_business_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          niche: string | null
+          onboarding_completed: boolean | null
+          trial_start: string | null
+          updated_at: string | null
+          user_id: string
+          user_type: string | null
+          website: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          niche?: string | null
+          onboarding_completed?: boolean | null
+          trial_start?: string | null
+          updated_at?: string | null
+          user_id: string
+          user_type?: string | null
+          website?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          niche?: string | null
+          onboarding_completed?: boolean | null
+          trial_start?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_type?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
