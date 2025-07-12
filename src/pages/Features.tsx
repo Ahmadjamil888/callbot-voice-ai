@@ -57,10 +57,17 @@ const Features = () => {
             <span className="text-xl font-bold text-gray-900">CallBot AI</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
               Back to Home
             </Button>
-            <Button onClick={() => navigate('/auth')} className="bg-blue-600 hover:bg-blue-700">
+            <Button 
+              onClick={() => navigate('/auth')} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            >
               Try Free
             </Button>
           </div>
@@ -128,7 +135,7 @@ const Features = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4"
+              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 font-medium"
               onClick={() => navigate('/auth')}
             >
               Start Free Trial
@@ -137,7 +144,7 @@ const Features = () => {
             <Button 
               size="lg" 
               variant="outline"
-              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4"
+              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 font-medium"
               onClick={() => navigate('/demo')}
             >
               Watch Demo
