@@ -1,8 +1,10 @@
 
+import { LucideIcon } from 'lucide-react';
+
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   trend?: {
     value: string;
     isPositive: boolean;
